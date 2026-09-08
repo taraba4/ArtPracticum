@@ -180,6 +180,125 @@
     });
   });
 
+  const participantGallery = document.querySelector('#participant-gallery');
+  if (participantGallery) {
+    const works = [
+      { src: 'assets/practicum-gallery/work-04.webp', width: 1131, height: 1600 },
+      { src: 'assets/practicum-gallery/work-01.webp', width: 1600, height: 1600 },
+      { src: 'assets/practicum-gallery/work-07.webp', width: 1131, height: 1600 },
+      { src: 'assets/practicum-gallery/work-02.webp', width: 1600, height: 1131 },
+      { src: 'assets/practicum-gallery/work-03.webp', width: 1600, height: 1600 },
+      { src: 'assets/practicum-gallery/work-05.webp', width: 1131, height: 1600 },
+      { src: 'assets/practicum-gallery/work-06.webp', width: 1600, height: 1131 },
+      { src: 'assets/practicum-gallery/work-08.webp', width: 1131, height: 1600 },
+    ];
+    const cloneCount = 3;
+    const galleryViewport = participantGallery.querySelector('.participant-gallery__viewport');
+    const galleryTrack = participantGallery.querySelector('.participant-gallery__track');
+    const galleryCounter = participantGallery.querySelector('#participant-gallery-counter');
+    const previousButton = participantGallery.querySelector('#participant-gallery-prev');
+    const nextButton = participantGallery.querySelector('#participant-gallery-next');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const trackWorks = [...works.slice(-cloneCount), ...works, ...works.slice(0, cloneCount)];
+    let trackIndex = cloneCount;
+    let touchStartX = 0;
+    let transitionRunning = false;
+
+    galleryTrack.innerHTML = trackWorks.map((work, position) => {
+      const workIndex = (position - cloneCount + works.length) % works.length;
+      return `<figure class="participant-gallery__slide"><button class="participant-gallery__open" type="button" data-work-index="${workIndex}" aria-label="Открыть работу ${workIndex + 1} полностью" aria-haspopup="dialog"><img class="participant-gallery__image" src="${work.src}" alt="Абстрактная работа участника практикума, ${workIndex + 1} из ${works.length}" width="${work.width}" height="${work.height}" loading="lazy" decoding="async"></button></figure>`;
+    }).join('');
+
+    const gallerySlides = [...galleryTrack.querySelectorAll('.participant-gallery__slide')];
+
+    const getActiveWork = () => (trackIndex - cloneCount + works.length) % works.length;
+
+    const updateCounter = () => {
+      const activeWork = getActiveWork();
+      galleryCounter.innerHTML = `<strong>${String(activeWork + 1).padStart(2, '0')}</strong> / ${String(works.length).padStart(2, '0')} · Работы участников`;
+    };
+
+    const positionTrack = (animate) => {
+      const trackPadding = Number.parseFloat(getComputedStyle(galleryTrack).paddingLeft) || 0;
+      const offset = gallerySlides[trackIndex].offsetLeft - trackPadding;
+      galleryTrack.style.transition = animate && !reducedMotion.matches
+        ? 'transform 480ms cubic-bezier(.22,.61,.36,1)'
+        : 'none';
+      galleryTrack.style.transform = `translate3d(${-offset}px, 0, 0)`;
+    };
+
+    const normalizeTrack = () => {
+      if (trackIndex >= cloneCount + works.length) trackIndex = cloneCount;
+      if (trackIndex < cloneCount) trackIndex = cloneCount + works.length - 1;
+      positionTrack(false);
+      updateCounter();
+    };
+
+    const moveGallery = (direction) => {
+      if (transitionRunning) return;
+      trackIndex += direction;
+      updateCounter();
+      if (reducedMotion.matches) {
+        normalizeTrack();
+        return;
+      }
+      transitionRunning = true;
+      positionTrack(true);
+    };
+
+    const openWork = (workIndex) => {
+      const work = works[workIndex];
+      const dialog = document.createElement('dialog');
+      dialog.className = 'participant-lightbox';
+      dialog.setAttribute('aria-label', `Работа участника ${workIndex + 1} из ${works.length}`);
+      dialog.innerHTML = `<div class="participant-lightbox__inner"><div class="participant-lightbox__topbar"><span>Работа участника · ${String(workIndex + 1).padStart(2, '0')} / ${String(works.length).padStart(2, '0')}</span><button class="participant-lightbox__close" type="button" aria-label="Закрыть полноэкранный просмотр"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div><img class="participant-lightbox__image" src="${work.src}" width="${work.width}" height="${work.height}" alt="Абстрактная работа участника практикума, ${workIndex + 1} из ${works.length}"></div>`;
+      document.body.append(dialog);
+      const closeDialog = () => dialog.close();
+      dialog.querySelector('.participant-lightbox__close').addEventListener('click', closeDialog);
+      dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) closeDialog();
+      });
+      dialog.addEventListener('close', () => dialog.remove(), { once: true });
+      dialog.showModal();
+    };
+
+    galleryTrack.querySelectorAll('.participant-gallery__open').forEach((button) => {
+      button.addEventListener('click', () => openWork(Number(button.dataset.workIndex)));
+    });
+    galleryTrack.addEventListener('transitionend', (event) => {
+      if (event.propertyName !== 'transform') return;
+      transitionRunning = false;
+      normalizeTrack();
+    });
+    previousButton.addEventListener('click', () => moveGallery(-1));
+    nextButton.addEventListener('click', () => moveGallery(1));
+    participantGallery.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        moveGallery(-1);
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        moveGallery(1);
+      }
+    });
+    participantGallery.addEventListener('touchstart', (event) => {
+      touchStartX = event.changedTouches[0].clientX;
+    }, { passive: true });
+    participantGallery.addEventListener('touchend', (event) => {
+      const distance = event.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(distance) < 50) return;
+      moveGallery(distance < 0 ? 1 : -1);
+    }, { passive: true });
+    new ResizeObserver(() => {
+      if (!transitionRunning) positionTrack(false);
+    }).observe(galleryViewport);
+    requestAnimationFrame(() => {
+      positionTrack(false);
+      updateCounter();
+    });
+  }
+
   document.querySelector('footer button')?.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
