@@ -168,6 +168,43 @@
 }
 
 @media (max-width: 767px) {
+  #hero-practice-label {
+    flex-shrink: 0;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  #hero-subline {
+    display: none;
+  }
+
+  #hero-section > .relative > .flex.flex-wrap.items-center.justify-between {
+    gap: 12px;
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+  }
+
+  #hero-short-facts {
+    height: auto;
+    min-height: 0;
+  }
+
+  #hero-short-facts > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 14px 18px;
+  }
+
+  #hero-short-facts > div > span {
+    display: none;
+  }
+
+  #hero-short-facts > div > div:last-of-type {
+    grid-column: 1 / -1;
+  }
+
   .participant-gallery__slide {
     flex-basis: 100%;
   }
